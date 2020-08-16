@@ -25,6 +25,7 @@ import Row as Row
 data Action
   = HandleRow Int Row.Message
   | ChangeFiltering Filtering Event
+  | ClearCompleted
   | EnterText Event
   | TextFired String
 
@@ -98,7 +99,10 @@ component =
               [ HE.onClick $ Just <<< ChangeFiltering f <<< toEvent
               , HP.classes $ if state.filtering == f then [ ClassName "selected" ] else []
               ] [ HH.text $ show f ] ]
-        , HH.button [ HP.class_ $ ClassName "clear-completed" ]
+        , HH.button
+          [ HE.onClick \_ -> Just ClearCompleted
+          , HP.class_ $ ClassName "clear-completed"
+          ]
           [ HH.text $ "Clear completed (" <> show (A.length $ A.filter isCompleted state.rows) <> ")" ]
         ]
       ]
@@ -125,6 +129,11 @@ component =
     ChangeFiltering f event -> do
       H.liftEffect $ preventDefault event
       H.modify_ \state -> state { filtering = f }
+    ClearCompleted -> do
+      newState <- H.modify \state -> state
+        { rows = A.filter (not <<< isCompleted) state.rows
+        }
+      H.liftEffect $ Console.log $ show newState
     EnterText event -> do
       H.liftEffect $ preventDefault event
       newState <- H.modify \state -> state { text = "", rows = A.snoc state.rows { done: false, editing: false, text: state.text } }
