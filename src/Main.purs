@@ -2,14 +2,14 @@ module Main where
 
 import Prelude
 
-import Data.Array (catMaybes)
-import Data.FunctorWithIndex (mapWithIndex)
+import Data.Array as A
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
 import Data.Symbol (SProxy(..))
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
+import Effect.Console as Console
 import Halogen as H
 import Halogen.Aff as HA
 import Halogen.HTML as HH
@@ -79,7 +79,7 @@ component =
           ]
         , HH.label [ HP.for "toggle-all" ] [ HH.text "Mark all as complete" ]
         , HH.ul [ HP.class_ $ ClassName "todo-list" ]
-          $ catMaybes $ flip mapWithIndex state.rows \i r ->
+          $ A.catMaybes $ flip A.mapWithIndex state.rows \i r ->
             if filterRow state.filtering r
             then Just $ HH.slot _row i Row.component r (Just <<< HandleRow i)
             else Nothing
@@ -106,7 +106,20 @@ component =
   handleAction = case _ of
     TextFired v -> do
       H.modify_ \state -> state { text = v }
-    HandleRow i v -> pure unit
+    HandleRow i Row.Destroy -> do
+      newState <- H.modify \state -> state
+        { rows = case A.deleteAt i state.rows of
+          Nothing -> state.rows
+          Just newRows -> newRows
+        }
+      H.liftEffect $ Console.log $ show newState
+    HandleRow i (Row.Changed r) -> do
+      newState <- H.modify \state -> state
+        { rows = case A.updateAt i r state.rows of
+          Nothing -> state.rows
+          Just newRows -> newRows
+        }
+      H.liftEffect $ Console.log $ show newState
     ChangeFiltering f event -> do
       H.liftEffect $ preventDefault event
       H.modify_ \state -> state { filtering = f }
