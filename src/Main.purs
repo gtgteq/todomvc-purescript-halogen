@@ -23,9 +23,10 @@ import Web.UIEvent.MouseEvent (toEvent)
 import Row as Row
 
 data Action
-  = TextFired String
-  | HandleRow Int Row.Message
+  = HandleRow Int Row.Message
   | ChangeFiltering Filtering Event
+  | EnterText Event
+  | TextFired String
 
 data Filtering
   = All
@@ -54,10 +55,7 @@ component =
   where
   initialState _ =
     { text: ""
-    , rows:
-      [ { done: true, editing: false, text: "one" }
-      , { done: false, editing: false, text: "two" }
-      ]
+    , rows: []
     , filtering: All
     }
 
@@ -66,10 +64,14 @@ component =
     [ HH.section [ HP.class_ $ ClassName "todoapp" ]
       [ HH.header [ HP.class_ $ ClassName "header" ]
         [ HH.h1_ [ HH.text "todos" ]
-        , HH.input
-          [ HE.onValueInput $ Just <<< TextFired
-          , HP.class_ $ ClassName "new-todo"
-          , HP.placeholder "What needs to be done?"
+        , HH.form
+          [ HE.onSubmit $ Just <<< EnterText ]
+          [ HH.input
+            [ HE.onValueInput $ Just <<< TextFired
+            , HP.class_ $ ClassName "new-todo"
+            , HP.placeholder "What needs to be done?"
+            , HP.value state.text
+            ]
           ]
         ]
       , HH.section [ HP.class_ $ ClassName "main" ]
@@ -104,8 +106,6 @@ component =
     ]
 
   handleAction = case _ of
-    TextFired v -> do
-      H.modify_ \state -> state { text = v }
     HandleRow i Row.Destroy -> do
       newState <- H.modify \state -> state
         { rows = case A.deleteAt i state.rows of
@@ -123,6 +123,12 @@ component =
     ChangeFiltering f event -> do
       H.liftEffect $ preventDefault event
       H.modify_ \state -> state { filtering = f }
+    EnterText event -> do
+      H.liftEffect $ preventDefault event
+      newState <- H.modify \state -> state { text = "", rows = A.snoc state.rows { done: false, editing: false, text: state.text } }
+      H.liftEffect $ Console.log $ show newState
+    TextFired v -> do
+      H.modify_ \state -> state { text = v }
 
 main :: Effect Unit
 main = HA.runHalogenAff do
