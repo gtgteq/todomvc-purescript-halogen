@@ -2,6 +2,7 @@ module Main where
 
 import Prelude
 
+import Data.Array (catMaybes)
 import Data.FunctorWithIndex (mapWithIndex)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
@@ -16,12 +17,15 @@ import Halogen.HTML.Core (ClassName(..))
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.VDom.Driver (runUI)
+import Web.Event.Event (Event, preventDefault)
+import Web.UIEvent.MouseEvent (toEvent)
 
 import Row as Row
 
 data Action
   = TextFired String
   | HandleRow Int Row.Message
+  | ChangeFiltering Filtering Event
 
 data Filtering
   = All
@@ -32,6 +36,10 @@ derive instance eqFiltering :: Eq Filtering
 derive instance genericFiltering :: Generic Filtering _
 instance showFiltering :: Show Filtering where
   show = genericShow
+
+filterRow All {} = true
+filterRow Active { done } = not done
+filterRow Completed { done } = done
 
 _row :: SProxy "row"
 _row = SProxy
@@ -71,14 +79,21 @@ component =
           ]
         , HH.label [ HP.for "toggle-all" ] [ HH.text "Mark all as complete" ]
         , HH.ul [ HP.class_ $ ClassName "todo-list" ]
-          $ flip mapWithIndex state.rows \i r -> HH.slot _row i Row.component r (Just <<< HandleRow i) -- map renderRow state.rows
+          $ catMaybes $ flip mapWithIndex state.rows \i r ->
+            if filterRow state.filtering r
+            then Just $ HH.slot _row i Row.component r (Just <<< HandleRow i)
+            else Nothing
         ]
       , HH.footer [ HP.class_ $ ClassName "footer" ]
         [ HH.span [ HP.class_ $ ClassName "todo-count" ]
           [ HH.text "items left" ]
         , HH.ul [ HP.class_ $ ClassName "filters" ]
           $ flip map [All, Active, Completed] \f ->
-            HH.li_ [ HH.a (if state.filtering == f then [ HP.class_ $ ClassName "selected" ] else []) [ HH.text $ show f ] ]
+            HH.li_
+            [ HH.a
+              [ HE.onClick $ Just <<< ChangeFiltering f <<< toEvent
+              , HP.classes $ if state.filtering == f then [ ClassName "selected" ] else []
+              ] [ HH.text $ show f ] ]
         , HH.button [ HP.class_ $ ClassName "clear-completed" ]
           [ HH.text "Clear completed (1)" ]
         ]
@@ -92,6 +107,9 @@ component =
     TextFired v -> do
       H.modify_ \state -> state { text = v }
     HandleRow i v -> pure unit
+    ChangeFiltering f event -> do
+      H.liftEffect $ preventDefault event
+      H.modify_ \state -> state { filtering = f }
 
 main :: Effect Unit
 main = HA.runHalogenAff do

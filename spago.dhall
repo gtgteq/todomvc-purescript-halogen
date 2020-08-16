@@ -9,6 +9,7 @@ You can edit this file as you like.
   , "generics-rep"
   , "halogen"
   , "web-events"
+  , "web-uievents"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
