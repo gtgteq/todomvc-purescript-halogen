@@ -42,6 +42,8 @@ filterRow All {} = true
 filterRow Active { done } = not done
 filterRow Completed { done } = done
 
+isCompleted { done } = done
+
 _row :: SProxy "row"
 _row = SProxy
 
@@ -88,7 +90,7 @@ component =
         ]
       , HH.footer [ HP.class_ $ ClassName "footer" ]
         [ HH.span [ HP.class_ $ ClassName "todo-count" ]
-          [ HH.text "items left" ]
+          [ HH.text $ let n = A.length state.rows in show n <> (if n == 1 then " item" else " items") <> " left" ]
         , HH.ul [ HP.class_ $ ClassName "filters" ]
           $ flip map [All, Active, Completed] \f ->
             HH.li_
@@ -97,7 +99,7 @@ component =
               , HP.classes $ if state.filtering == f then [ ClassName "selected" ] else []
               ] [ HH.text $ show f ] ]
         , HH.button [ HP.class_ $ ClassName "clear-completed" ]
-          [ HH.text "Clear completed (1)" ]
+          [ HH.text $ "Clear completed (" <> show (A.length $ A.filter isCompleted state.rows) <> ")" ]
         ]
       ]
     , HH.footer [ HP.class_ $ ClassName "info" ]
