@@ -5,8 +5,10 @@ You can edit this file as you like.
 { name = "my-project"
 , dependencies = [ "console", "effect", "psci-support"
   , "aff"
+  , "foldable-traversable"
   , "generics-rep"
   , "halogen"
+  , "web-events"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]

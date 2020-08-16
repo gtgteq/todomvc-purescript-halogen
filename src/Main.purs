@@ -2,9 +2,11 @@ module Main where
 
 import Prelude
 
+import Data.FunctorWithIndex (mapWithIndex)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
+import Data.Symbol (SProxy(..))
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Halogen as H
@@ -15,8 +17,11 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.VDom.Driver (runUI)
 
+import Row as Row
+
 data Action
   = TextFired String
+  | HandleRow Int Row.Message
 
 data Filtering
   = All
@@ -27,6 +32,9 @@ derive instance eqFiltering :: Eq Filtering
 derive instance genericFiltering :: Generic Filtering _
 instance showFiltering :: Show Filtering where
   show = genericShow
+
+_row :: SProxy "row"
+_row = SProxy
 
 component :: forall f i o m. MonadAff m => H.Component HH.HTML f i o m
 component =
@@ -63,7 +71,7 @@ component =
           ]
         , HH.label [ HP.for "toggle-all" ] [ HH.text "Mark all as complete" ]
         , HH.ul [ HP.class_ $ ClassName "todo-list" ]
-          $ map renderRow state.rows
+          $ flip mapWithIndex state.rows \i r -> HH.slot _row i Row.component r (Just <<< HandleRow i) -- map renderRow state.rows
         ]
       , HH.footer [ HP.class_ $ ClassName "footer" ]
         [ HH.span [ HP.class_ $ ClassName "todo-count" ]
@@ -80,23 +88,10 @@ component =
       ]
     ]
 
-  renderRow r =
-    HH.li (if r.done then [ HP.class_ $ ClassName "completed" ] else [])
-    [ HH.div [ HP.class_ $ ClassName "view" ]
-      [ HH.input
-        [ HP.class_ $ ClassName "toggle"
-        , HP.type_ HP.InputCheckbox
-        ]
-      , HH.label_ [ HH.text r.text ]
-      , HH.button [ HP.class_ $ ClassName "destroy" ]
-        []
-      ]
-    , HH.input [ HP.class_ $ ClassName "edit" ]
-    ]
-
   handleAction = case _ of
     TextFired v -> do
       H.modify_ \state -> state { text = v }
+    HandleRow i v -> pure unit
 
 main :: Effect Unit
 main = HA.runHalogenAff do
