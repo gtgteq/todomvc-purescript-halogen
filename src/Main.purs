@@ -26,8 +26,8 @@ data Action
   = HandleRow Int Row.Message
   | ChangeFiltering Filtering Event
   | ClearCompleted
-  | EnterText Event
-  | TextFired String
+  | ChangeText String
+  | EnterText
 
 data Filtering
   = All
@@ -67,14 +67,12 @@ component =
     [ HH.section [ HP.class_ $ ClassName "todoapp" ]
       [ HH.header [ HP.class_ $ ClassName "header" ]
         [ HH.h1_ [ HH.text "todos" ]
-        , HH.form
-          [ HE.onSubmit $ Just <<< EnterText ]
-          [ HH.input
-            [ HE.onValueInput $ Just <<< TextFired
-            , HP.class_ $ ClassName "new-todo"
-            , HP.placeholder "What needs to be done?"
-            , HP.value state.text
-            ]
+        , HH.input
+          [ HE.onValueInput $ Just <<< ChangeText
+          , HE.onValueChange \_ -> Just EnterText
+          , HP.class_ $ ClassName "new-todo"
+          , HP.placeholder "What needs to be done?"
+          , HP.value state.text
           ]
         ]
       , HH.section [ HP.class_ $ ClassName "main" ]
@@ -134,12 +132,11 @@ component =
         { rows = A.filter (not <<< isCompleted) state.rows
         }
       H.liftEffect $ Console.log $ show newState
-    EnterText event -> do
-      H.liftEffect $ preventDefault event
+    ChangeText v -> do
+      H.modify_ \state -> state { text = v }
+    EnterText -> do
       newState <- H.modify \state -> state { text = "", rows = A.snoc state.rows { done: false, editing: false, text: state.text } }
       H.liftEffect $ Console.log $ show newState
-    TextFired v -> do
-      H.modify_ \state -> state { text = v }
 
 main :: Effect Unit
 main = HA.runHalogenAff do

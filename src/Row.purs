@@ -27,7 +27,7 @@ data Action
   | ToggleEditing
   | TriggerDestroy
   | ChangeText String
-  | EnterText Event
+  | EnterText
 
 type State =
   { done :: Boolean
@@ -79,13 +79,11 @@ render r =
       ]
       []
     ]
-  , HH.form
-    [ HE.onSubmit $ Just <<< EnterText ]
-    [ HH.input
-      [ HE.onValueInput $ Just <<< ChangeText
-      , HP.class_ $ ClassName "edit"
-      , HP.value r.text
-      ]
+  , HH.input
+    [ HE.onValueInput $ Just <<< ChangeText
+    , HE.onValueChange \_ -> Just EnterText
+    , HP.class_ $ ClassName "edit"
+    , HP.value r.text
     ]
   ]
 
@@ -101,8 +99,7 @@ handleAction = case _ of
     H.raise Destroy
   ChangeText v -> do
     H.modify_ \r -> r { text = v }
-  EnterText event -> do
-    H.liftEffect $ preventDefault event
+  EnterText -> do
     newRow <- H.modify \r -> r
       { editing = not r.editing
       , previous = if S.null r.text then r.previous else r.text
